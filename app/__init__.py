@@ -6,6 +6,7 @@ from app.utils.violence_detector import ViolenceDetector
 from app.utils.database import Database
 from app.utils.topic_manager import TopicManager
 
+
 # 全局变量，在应用中共享
 baidu_nlp = None
 violence_detector = None

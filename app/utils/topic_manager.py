@@ -466,7 +466,7 @@ class TopicManager:
         """
         return self.db.get_all_topics()
     
-# 在TopicManager类中的get_topic_contents方法
+    # 在TopicManager类中的get_topic_contents方法
     def get_topic_contents(self, topic_id):
         """
         获取话题关联的所有内容

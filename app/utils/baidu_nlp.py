@@ -69,30 +69,3 @@ class BaiduNLP:
                 raise Exception(f"情感分析失败: {result['error_msg']}")
             else:
                 raise Exception(f"情感分析失败: {result}")
-
-    def keyword_extract(self, text, num=5):
-        """关键词提取"""
-        url = "https://aip.baidubce.com/rpc/2.0/nlp/v1/keyword"
-
-        # 获取access_token
-        access_token = self.get_access_token()
-
-        # 构建请求参数
-        params = {"access_token": access_token, "charset": "UTF-8"}
-        payload = json.dumps({"text": text, "num": num}, ensure_ascii=False)
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        }
-
-        # 发送请求
-        response = requests.post(url, params=params, data=payload.encode("utf-8"))
-        result = response.json()
-
-        if "items" in result:
-            return result["items"]
-        else:
-            if "error_msg" in result:
-                raise Exception(f"关键词提取失败: {result['error_msg']}")
-            else:
-                raise Exception(f"关键词提取失败: {result}")

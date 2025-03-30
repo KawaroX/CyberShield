@@ -8,6 +8,32 @@ import datetime
 
 main_bp = Blueprint('main', __name__)
 
+# 在 app/routes.py 文件顶部添加
+import jieba.analyse
+
+def extract_keywords(text, top_n=5):
+    """本地提取关键词"""
+    if not text or len(text.strip()) == 0:
+        return []
+    
+    try:
+        # 使用TF-IDF算法提取关键词
+        keywords = jieba.analyse.extract_tags(
+            text,
+            topK=top_n,
+            withWeight=True,
+            allowPOS=('ns', 'n', 'vn', 'v')
+        )
+        
+        # 转换为词列表
+        return [{"word": word, "score": float(weight)} for word, weight in keywords]
+    except Exception as e:
+        print(f"关键词提取失败: {e}")
+        # 简单分词作为回退方案
+        words = [w for w in jieba.cut(text) if len(w) > 1]
+        unique_words = list(set(words))[:top_n]
+        return [{"word": word, "score": 1.0} for word in unique_words]
+
 @main_bp.route('/')
 def index():
     """渲染首页"""
@@ -59,7 +85,7 @@ def analyze_content():
             
             # 提取关键词
             try:
-                keyword_items = baidu_nlp.keyword_extract(content, 5)
+                keyword_items = extract_keywords(content, 5)
                 content_analysis.keywords = [item["word"] for item in keyword_items]
             except Exception as e:
                 print(f"百度关键词提取失败: {e}")
@@ -222,7 +248,7 @@ def analyze_with_context():
         
         # 提取关键词
         try:
-            keyword_items = baidu_nlp.keyword_extract(content, 5)
+            keyword_items = extract_keywords(content, 5)
             content_analysis.keywords = [item["word"] for item in keyword_items]
         except Exception as e:
             print(f"百度关键词提取失败: {e}")
