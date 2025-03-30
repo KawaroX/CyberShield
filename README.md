@@ -1,6 +1,6 @@
 # CyberShield - 网络暴力预警和治理系统
 
-![CyberShield Logo](https://via.placeholder.com/800x200?text=CyberShield)
+![CyberShield Logo](image.png)
 
 CyberShield 是一个基于自然语言处理和机器学习技术的网络暴力预警和治理系统，旨在自动检测、预警和应对网络空间中的暴力内容。系统通过聚类和多维度分析用户生成内容，实现对网络暴力的早期识别和智能干预。
 

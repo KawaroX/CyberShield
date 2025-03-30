@@ -1,205 +1,233 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CyberShield - 网络暴力预警和治理系统</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- 确保 Chart.js 库在 main.js 前加载 -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <!-- 背景效果 -->
-        <div class="floating-shape shape1"></div>
-        <div class="floating-shape shape2"></div>
-        <div class="floating-shape shape3"></div>
+    <!-- 背景发光效果 -->
+    <div class="background-glow">
+        <div class="glow-circle"></div>
+        <div class="glow-circle"></div>
+        <div class="glow-circle"></div>
+    </div>
 
-        <header>
-            <h1>CyberShield</h1>
-            <p class="subtitle">智能网络暴力预警和治理系统</p>
+    <div class="container">
+        <!-- 导航栏 -->
+        <header class="navbar">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>CyberShield</h1>
+                    <p>网络暴力预警与治理系统</p>
+                </div>
+            </div>
+            <div class="nav-links">
+                <a href="#" class="nav-link active">首页</a>
+                <a href="#" class="nav-link">监控面板</a>
+                <a href="#" class="nav-link">话题分析</a>
+                <a href="#" class="nav-link">设置</a>
+                <a href="#" class="nav-link">帮助</a>
+            </div>
+            <!-- 注意：主题切换按钮会由JavaScript动态添加 -->
         </header>
 
-        <section class="analyzer">
-            <textarea id="content" placeholder="请输入要分析的内容..."></textarea>
-            <div class="analyzer-btn-container">
-                <button id="analyze" class="analyzer-btn">
-                    <span>分析内容</span>
-                </button>
-            </div>
-        </section>
-
-        <section class="analyzer">
-            <textarea id="content" placeholder="请输入要分析的内容..."></textarea>
-            
-            <div class="context-controls">
-                <div class="form-group">
-                    <label for="topic-select">选择话题(可选):</label>
-                    <select id="topic-select">
-                        <option value="">-- 自动分类 --</option>
-                        <!-- 话题选项会通过JS动态加载 -->
-                    </select>
-                    <button id="refresh-topics" class="btn-small">刷新</button>
-                </div>
-                
-                <div class="form-group">
-                    <label>上下文内容(可选):</label>
-                    <div id="context-list" class="context-list">
-                        <!-- 上下文内容将在这里显示 -->
-                        <div class="empty-context">未选择上下文</div>
-                    </div>
-                    <button id="add-context" class="btn-small">添加上下文</button>
-                </div>
-            </div>
-            
-            <div class="analyzer-btn-container">
-                <button id="analyze" class="analyzer-btn">
-                    <span>分析内容</span>
-                </button>
-            </div>
-        </section>
-
-        <!-- 添加上下文对话框 -->
-        <div id="context-dialog" class="dialog">
-            <div class="dialog-content">
-                <span class="close">&times;</span>
-                <h3>选择上下文内容</h3>
-                
-                <div class="form-group">
-                    <label>搜索话题:</label>
-                    <input type="text" id="topic-search" placeholder="输入关键词搜索话题...">
-                    <button id="search-topics" class="btn-small">搜索</button>
-                </div>
-                
-                <div class="topic-results">
-                    <!-- 搜索结果将在这里显示 -->
-                </div>
-                
-                <div class="form-group">
-                    <label>话题内容:</label>
-                    <div class="topic-contents">
-                        <!-- 话题内容将在这里显示 -->
+        <!-- 主要内容 -->
+        <div class="main-content">
+            <!-- 分析器卡片 -->
+            <div class="glass-card analyzer-section">
+                <div class="input-container">
+                    <h2 class="section-title">内容分析</h2>
+                    <div class="input-group">
+                        <label for="content-input" class="input-label">输入要分析的内容</label>
+                        <textarea id="content-input" class="text-input" placeholder="请输入要分析的网络内容..."></textarea>
                     </div>
                 </div>
                 
-                <div class="dialog-actions">
-                    <button id="add-selected-context" class="btn-small">添加所选内容</button>
-                    <button class="cancel btn-small">取消</button>
+                <div class="controls-container">
+                    <div class="control-group">
+                        <label class="input-label">选择话题 (可选)</label>
+                        <select id="topic-select" class="select-input">
+                            <option value="">-- 自动分类 --</option>
+                            <!-- 话题选项将通过JS动态加载 -->
+                        </select>
+                        <div class="control-actions">
+                            <button id="refresh-topics" class="button btn-secondary btn-small" style="margin-top: 8px;">
+                                <i class="fas fa-sync-alt"></i> 刷新话题
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label class="input-label">上下文内容 (可选)</label>
+                        <div id="context-list" class="context-list">
+                            <div class="empty-message">未选择上下文内容</div>
+                        </div>
+                        <button id="add-context" class="button btn-secondary btn-small">
+                            <i class="fas fa-plus"></i> 添加上下文
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="action-row">
+                    <button id="analyze-btn" class="button btn-primary">
+                        <i class="fas fa-search btn-icon"></i>
+                        <span>分析内容</span>
+                    </button>
                 </div>
             </div>
-        </div>
 
+            <!-- 加载状态 -->
+            <div id="loading" class="glass-card loading-container">
+                <div class="loader"></div>
+                <div class="loading-text">分析数据中，请稍候...</div>
+            </div>
 
-        <div class="loading" id="loading">
-            <span class="loading-animation"></span>
-            <span>分析数据中，请稍候...</span>
-        </div>
-
-        <div class="error" id="error"></div>
-
-        <section class="result" id="result">
-            <div class="desktop-layout">
-                <div class="main-column">
+            <!-- 结果区域 -->
+            <div id="results" class="results-grid" style="display: none;">
+                <!-- 左侧内容分析结果 -->
+                <div class="left-column">
                     <!-- 微观内容分析卡片 -->
-                    <div class="result-card">
-                        <h3><i class="fas fa-microscope result-icon"></i> 微观内容分析</h3>
+                    <div class="glass-card result-card">
+                        <div class="card-header">
+                            <div class="card-icon icon-micro">
+                                <i class="fas fa-microscope"></i>
+                            </div>
+                            <h3 class="card-title">微观内容分析</h3>
+                        </div>
 
-                        <div class="horizontal-card-content">
-                            <div class="left-part">
+                        <div class="horizontal-content">
+                            <div class="left-side">
+                                <!-- 情感分析 -->
                                 <div class="sentiment-container">
                                     <div class="sentiment-emoji" id="sentiment-emoji">😐</div>
-                                    <div class="sentiment-scales">
-                                        <div class="sentiment-scale">
+                                    <div class="sentiment-scale">
+                                        <div class="sentiment-track">
                                             <div class="sentiment-marker" id="sentiment-marker"></div>
                                         </div>
-                                        <div class="meter-label">
+                                        <div class="sentiment-labels">
                                             <span>消极</span>
                                             <span>积极</span>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="meter-container" id="violence-meter">
-                                    <div class="meter-label">
-                                        <span>暴力分数</span>
-                                        <span id="violence-score">0%</span>
+                                <!-- 暴力分数 -->
+                                <div class="metric-container">
+                                    <div class="metric-label">
+                                        <span class="metric-name">暴力分数</span>
+                                        <span class="metric-value" id="violence-score">0%</span>
                                     </div>
-                                    <div class="meter-track">
-                                        <div class="meter-fill" id="violence-fill"></div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill progress-low" id="violence-fill" style="width: 0%"></div>
                                     </div>
                                 </div>
 
-                                <div class="result-data">
-                                    <div class="result-row">
-                                        <div class="result-label">暴力类型</div>
-                                        <div class="result-value" id="violence-type">-</div>
+                                <!-- 分析数据 -->
+                                <div class="data-grid">
+                                    <div class="data-row">
+                                        <span class="data-label">暴力类型</span>
+                                        <span class="data-value" id="violence-type">-</span>
                                     </div>
-                                    <div class="result-row">
-                                        <div class="result-label">置信度</div>
-                                        <div class="result-value" id="confidence-score">-</div>
+                                    <div class="data-row">
+                                        <span class="data-label">置信度</span>
+                                        <span class="data-value" id="confidence-score">-</span>
                                     </div>
-                                    <div class="result-row">
-                                        <div class="result-label">是否为负面内容</div>
-                                        <div class="result-value" id="is-negative">-</div>
+                                    <div class="data-row">
+                                        <span class="data-label">是否为负面内容</span>
+                                        <span class="data-value" id="is-negative">-</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="right-part">
+                            <div class="right-side">
                                 <!-- 内容分析雷达图 -->
-                                <div class="radar-chart-container">
-                                    <canvas id="micro-radar-chart" class="radar-chart"></canvas>
+                                <div class="chart-container">
+                                    <canvas id="micro-radar-chart" class="chart-canvas"></canvas>
                                 </div>
 
+                                <!-- 关键词 -->
                                 <div>
-                                    <div class="result-label">关键词</div>
+                                    <div class="metric-label">
+                                        <span class="metric-name">关键词</span>
+                                    </div>
                                     <div class="tags-container" id="micro-keywords"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 上下文影响分析（当使用上下文时显示） -->
+                        <div id="context-influence" class="context-influence" style="display: none;">
+                            <div class="influence-header">
+                                <i class="fas fa-link influence-icon"></i>
+                                <span>上下文影响分析</span>
+                            </div>
+                            <div class="influence-content">
+                                <div class="influence-message" id="influence-message"></div>
+                                <div class="influence-details">
+                                    <span class="influence-stat" id="solo-score">单独分析暴力分数: 0%</span>
+                                    <span class="influence-stat" id="final-score">考虑上下文后暴力分数: 0%</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- 话题分析卡片 -->
-                    <div class="result-card">
-                        <h3><i class="fas fa-globe result-icon"></i> 话题分析</h3>
+                    <div class="glass-card result-card">
+                        <div class="card-header">
+                            <div class="card-icon icon-macro">
+                                <i class="fas fa-globe"></i>
+                            </div>
+                            <h3 class="card-title">话题分析</h3>
+                        </div>
 
-                        <div class="horizontal-card-content">
-                            <div class="left-part">
-                                <div class="meter-container" id="risk-meter">
-                                    <div class="meter-label">
-                                        <span>风险评分</span>
-                                        <span id="risk-score">0%</span>
+                        <div class="horizontal-content">
+                            <div class="left-side">
+                                <!-- 风险评分 -->
+                                <div class="metric-container">
+                                    <div class="metric-label">
+                                        <span class="metric-name">风险评分</span>
+                                        <span class="metric-value" id="risk-score">0%</span>
                                     </div>
-                                    <div class="meter-track">
-                                        <div class="meter-fill" id="risk-fill"></div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill progress-low" id="risk-fill" style="width: 0%"></div>
                                     </div>
                                 </div>
 
-                                <div class="result-data">
-                                    <div class="result-row">
-                                        <div class="result-label">话题ID</div>
-                                        <div class="result-value" id="topic-id">-</div>
+                                <!-- 话题数据 -->
+                                <div class="data-grid">
+                                    <div class="data-row">
+                                        <span class="data-label">话题ID</span>
+                                        <span class="data-value" id="topic-id">-</span>
                                     </div>
-                                    <div class="result-row">
-                                        <div class="result-label">内容数量</div>
-                                        <div class="result-value" id="content-count">-</div>
+                                    <div class="data-row">
+                                        <span class="data-label">内容数量</span>
+                                        <span class="data-value" id="content-count">-</span>
                                     </div>
-                                    <div class="result-row">
-                                        <div class="result-label">干预状态</div>
-                                        <div class="result-value" id="intervention-status">-</div>
+                                    <div class="data-row">
+                                        <span class="data-label">干预状态</span>
+                                        <span class="data-value" id="intervention-status">-</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="right-part">
-                                <!-- 话题趋势可视化 -->
-                                <div class="radar-chart-container">
-                                    <canvas id="topic-trend-chart" class="radar-chart"></canvas>
+                            <div class="right-side">
+                                <!-- 话题趋势图 -->
+                                <div class="chart-container">
+                                    <canvas id="topic-trend-chart" class="chart-canvas"></canvas>
                                 </div>
 
+                                <!-- 话题关键词 -->
                                 <div>
-                                    <div class="result-label">话题关键词</div>
+                                    <div class="metric-label">
+                                        <span class="metric-name">话题关键词</span>
+                                    </div>
                                     <div class="tags-container" id="macro-keywords"></div>
                                 </div>
                             </div>
@@ -207,37 +235,124 @@
                     </div>
                 </div>
 
-                <div class="side-column">
-                    <!-- 操作卡片 -->
-                    <div class="result-card">
-                        <h3><i class="fas fa-bolt result-icon"></i> 建议操作</h3>
+                <!-- 右侧操作建议 -->
+                <div class="right-column">
+                    <!-- 操作建议卡片 -->
+                    <div class="glass-card result-card">
+                        <div class="card-header">
+                            <div class="card-icon icon-action">
+                                <i class="fas fa-bolt"></i>
+                            </div>
+                            <h3 class="card-title">建议操作</h3>
+                        </div>
 
-                        <div class="result-data">
-                            <div class="result-row">
-                                <div class="result-label">操作类型</div>
-                                <div class="result-value" id="action-type">-</div>
+                        <div class="data-grid">
+                            <div class="data-row">
+                                <span class="data-label">操作类型</span>
+                                <span class="data-value" id="action-type">-</span>
                             </div>
-                            <div class="result-row">
-                                <div class="result-label">严重程度</div>
-                                <div class="result-value" id="severity">-</div>
+                            <div class="data-row">
+                                <span class="data-label">严重程度</span>
+                                <span class="data-value" id="severity">-</span>
                             </div>
-                            <div class="result-row">
-                                <div class="result-label">详细信息</div>
-                                <div class="result-value" id="action-message">-</div>
+                            <div class="data-row">
+                                <span class="data-label">详细信息</span>
+                                <span class="data-value" id="action-message">-</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- 干预建议卡片 -->
-                    <div class="result-card">
-                        <h3><i class="fas fa-shield-alt result-icon"></i> 话题干预建议</h3>
-                        <ul class="intervention-list" id="intervention-list"></ul>
+                    <div class="glass-card result-card">
+                        <div class="card-header">
+                            <div class="card-icon icon-action">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <h3 class="card-title">话题干预建议</h3>
+                        </div>
+
+                        <ul class="intervention-list" id="intervention-list">
+                            <!-- 干预建议将通过JS动态加载 -->
+                            <li class="intervention-item">
+                                <span class="intervention-text">加载中...</span>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
-        </section>
+        </div>
+
+        <!-- 上下文选择对话框 -->
+        <div id="context-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">选择上下文内容</h3>
+                    <button class="close-btn" id="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="topic-search" class="search-input" placeholder="输入关键词搜索话题...">
+                    </div>
+                    <button id="search-topics" class="button btn-secondary btn-small">
+                        <i class="fas fa-search"></i> 搜索
+                    </button>
+
+                    <div class="form-group">
+                        <label class="form-label">话题搜索结果</label>
+                        <div class="results-box" id="topic-results">
+                            <!-- 话题搜索结果将通过JS动态加载 -->
+                            <div class="empty-message">请输入关键词搜索话题</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">话题内容</label>
+                        <div class="results-box" id="topic-contents">
+                            <!-- 话题内容将通过JS动态加载 -->
+                            <div class="empty-message">请先选择一个话题</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="add-selected-context" class="button btn-primary">
+                        <i class="fas fa-plus"></i> 添加所选内容
+                    </button>
+                    <button id="cancel-context" class="button btn-secondary">
+                        取消
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 页脚 -->
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-logo">CyberShield</div>
+                <div class="footer-copyright">© 2025 CyberShield - 网络暴力预警与治理系统</div>
+                <div class="footer-links">
+                    <a href="#" class="footer-link">关于我们</a>
+                    <a href="#" class="footer-link">使用指南</a>
+                    <a href="#" class="footer-link">隐私政策</a>
+                    <a href="#" class="footer-link">联系我们</a>
+                </div>
+            </div>
+        </footer>
     </div>
 
+    <!-- 移动端菜单 -->
+    <div class="mobile-menu" id="mobile-menu">
+        <button class="mobile-menu-close" id="mobile-menu-close">
+            <i class="fas fa-times"></i>
+        </button>
+        <a href="#" class="mobile-nav-link active">首页</a>
+        <a href="#" class="mobile-nav-link">监控面板</a>
+        <a href="#" class="mobile-nav-link">话题分析</a>
+        <a href="#" class="mobile-nav-link">设置</a>
+        <a href="#" class="mobile-nav-link">帮助</a>
+    </div>
+
+    <!-- JavaScript -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
