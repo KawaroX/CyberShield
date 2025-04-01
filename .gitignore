@@ -48,4 +48,4 @@ logs/
 # Testing
 .coverage
 htmlcov/
-.pytest_cache/
+.pytest_cache/embedding_training/comments.txt
