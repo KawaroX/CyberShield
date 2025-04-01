@@ -22,6 +22,11 @@ class TopicAnalysis:
         self.content_count = 0  # 内容总数
         self.users_involved = 0  # 参与用户数
         self.growth_rate = 0.0  # 增长速率
+
+        # 
+        self.hourly_stats = {}  # 小时级统计数据
+        self.growth_rate = 0.0  # 增长率
+        self.risk_acceleration = 0.0  # 风险加速度
         
         # 干预状态
         self.intervention_status = "Monitoring"  # 干预状态 (Monitoring, EarlyWarning, ActiveIntervention)

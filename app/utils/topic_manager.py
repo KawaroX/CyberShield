@@ -28,7 +28,8 @@ class TopicManager:
         self.clusterer = BGETopicClusterer(
             ollama_url=ollama_url,
             model_name=model_name,
-            num_clusters=num_clusters
+            num_clusters=num_clusters,
+            db=self.db
         )
         
         # 定期聚类的设置
@@ -47,16 +48,17 @@ class TopicManager:
         contents = self.db.get_recent_contents_for_clustering(days=7, limit=1000)
         print(f"从数据库加载了 {len(contents)} 条历史内容")
         
-        # 添加到聚类器
+        loaded_count = 0
         for content in contents:
             content_id = content["content_id"]
             text = content.get("raw_content", "")
+            
             if text:
+                # 添加文档 - 现在会自动使用缓存和持久化机制
                 self.clusterer.add_document(content_id, text)
+                loaded_count += 1
         
-        # 如果有足够数据，进行初始聚类
-        if len(contents) >= 10:
-            self.run_clustering()
+        print(f"成功加载了 {loaded_count} 条内容到聚类器")
     
     def add_content(self, content_analysis, context_ids=None, target_topic_id=None):
         """
@@ -476,3 +478,56 @@ class TopicManager:
         # 如果数据库层已经处理了序列化，这里可能已经是字典列表
         # 如果不是，需要适当处理
         return contents
+    
+    # 增加话题分析趋势跟踪
+    def analyze_topic_trend(self, topic_id, time_window=24):
+        """分析话题的发展趋势，计算风险增长率"""
+        # 获取指定时间窗口内的内容
+        now = datetime.datetime.now()
+        start_time = now - datetime.timedelta(hours=time_window)
+        
+        # 按小时分组统计
+        hourly_stats = {}
+        for i in range(time_window):
+            hour_start = start_time + datetime.timedelta(hours=i)
+            hour_end = hour_start + datetime.timedelta(hours=1)
+            
+            contents = self.db.contents.find({
+                "topic_id": topic_id,
+                "created_at": {"$gte": hour_start, "$lt": hour_end}
+            })
+            
+            contents = list(contents)
+            violence_scores = [c.get("violence_score", 0) for c in contents]
+            avg_score = sum(violence_scores) / len(violence_scores) if violence_scores else 0
+            
+            hourly_stats[hour_start.isoformat()] = {
+                "count": len(contents),
+                "avg_violence_score": avg_score
+            }
+        
+        # 计算整体趋势
+        counts = [stats["count"] for stats in hourly_stats.values()]
+        scores = [stats["avg_violence_score"] for stats in hourly_stats.values()]
+        
+        growth_rate = 0
+        risk_acceleration = 0
+        
+        if len(counts) > 2:
+            # 计算增长率（最近3小时vs前3小时）
+            recent = sum(counts[-3:]) / 3 if counts[-3:] else 0
+            earlier = sum(counts[-6:-3]) / 3 if counts[-6:-3] else 0
+            growth_rate = (recent - earlier) / max(1, earlier)
+            
+            # 计算暴力分数加速度
+            recent_score = sum(scores[-3:]) / 3 if scores[-3:] else 0
+            earlier_score = sum(scores[-6:-3]) / 3 if scores[-6:-3] else 0
+            risk_acceleration = recent_score - earlier_score
+        
+        return {
+            "hourly_stats": hourly_stats,
+            "growth_rate": growth_rate,
+            "risk_acceleration": risk_acceleration,
+            "is_accelerating": risk_acceleration > 0.1,
+            "needs_urgent_attention": growth_rate > 0.5 and risk_acceleration > 0.2
+        }

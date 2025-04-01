@@ -72,43 +72,41 @@ class ViolenceDetector:
         # 初始化jieba分词
         jieba.initialize()
 
-    def detect(self, text):
-        """
-        检测文本中的暴力内容
-        返回暴力分数(0-1)、暴力类型和置信度
-        """
+    def detect(self, text, context=None):
+        """检测文本中的暴力内容，考虑上下文"""
         # 分词
         words = jieba.lcut(text)
-        print(f"分词结果: {words}")
         
         # 记录匹配到的暴力词及其权重
         matched_words = []
         violence_score = 0.0
         
         # 根据词典计算暴力分数
-        # for word in words:
-        #     if word in self.violence_dict:
-        #         violence_score += self.violence_dict[word]
-        #         matched_words.append(word)
-
         for item in self.violence_dict:
             if item in text:
-                violence_score += self.violence_dict[item]
-                matched_words.append(item)
-
-        print(f"匹配到的暴力词: {matched_words}, 暴力分数: {violence_score}")
+                weight = self.violence_dict[item]
                 
-        # 将暴力分数归一化到0-1范围
-        violence_score /= max(self.violence_dict.values(), default=1.0)
+                # 上下文感知调整
+                if context:
+                    # 如果上下文中已有暴力内容，提高权重
+                    if any(v in context for v in self.violence_dict.keys()):
+                        weight *= 1.2
+                    # 如果是引用上下文内容，降低权重
+                    if f"{item}" in text or f"「{item}」" in text:
+                        weight *= 0.5
+                
+                violence_score += weight
+                matched_words.append(item)
         
-        # 限制暴力分数范围为0-1
-        violence_score = min(violence_score, 1.0)
+        # 将暴力分数归一化到0-1范围
+        max_possible_score = min(sum(list(self.violence_dict.values())[:5]), 1.0)
+        violence_score = min(violence_score / max_possible_score, 1.0)
         
         # 确定暴力类型
         violence_type = self._determine_violence_type(matched_words)
         
-        # 计算置信度（简化版，未来可以替换为机器学习模型的置信度）
-        confidence_score = 0.7 + 0.2 * random.random() if violence_score > 0.3 else 0.5 + 0.2 * random.random()
+        # 计算置信度
+        confidence_score = min(0.5 + 0.5 * (len(matched_words) / max(5, len(words) / 10)), 1.0)
         
         return {
             "violence_score": violence_score,

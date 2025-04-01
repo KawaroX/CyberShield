@@ -1,5 +1,6 @@
 from pymongo import MongoClient
 import datetime
+import numpy as np
 from bson import ObjectId
 
 def json_serialize(obj):
@@ -48,6 +49,26 @@ class Database:
         self.contents.create_index("content_id")
         self.topics.create_index("topic_id")
         self.contents.create_index("created_at")
+
+    def _load_historical_data(self):
+        """加载历史数据到聚类器，用于初始化"""
+        contents = self.db.get_recent_contents_for_clustering(days=7, limit=1000)
+        print(f"从数据库加载了 {len(contents)} 条历史内容")
+        
+        # 添加到聚类器
+        for content in contents:
+            content_id = content["content_id"]
+            text = content.get("raw_content", "")
+            
+            # 尝试获取存储的嵌入向量
+            stored_embedding = self.db.get_embedding(content_id)
+            
+            if stored_embedding is not None:
+                # 直接使用存储的嵌入
+                self.clusterer.add_document_with_embedding(content_id, text, stored_embedding)
+            elif text:
+                # 如果没有存储的嵌入，重新计算
+                self.clusterer.add_document(content_id, text)
         
     def insert_content(self, content_analysis):
         """插入内容分析结果"""
@@ -130,6 +151,20 @@ class Database:
         # 转换为 JSON 可序列化格式
         return [convert_mongo_doc(content) for content in contents]
     
+    def save_embedding(self, content_id, embedding):
+        """存储内容的嵌入向量"""
+        self.contents.update_one(
+            {"content_id": content_id},
+            {"$set": {"embedding": embedding.tolist()}}
+        )
+        
+    def get_embedding(self, content_id):
+        """获取内容的嵌入向量"""
+        content = self.contents.find_one({"content_id": content_id})
+        if content and "embedding" in content:
+            return np.array(content["embedding"])
+        return None
+
     def save_cluster_results(self, cluster_mapping):
         """保存聚类结果"""
         # 清空旧的聚类结果

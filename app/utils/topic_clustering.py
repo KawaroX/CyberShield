@@ -1,5 +1,6 @@
 import numpy as np
 import requests
+import hdbscan
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.metrics.pairwise import cosine_similarity
@@ -15,7 +16,7 @@ class BGETopicClusterer:
     使用Ollama API生成嵌入
     """
     def __init__(self, ollama_url="http://localhost:11434", model_name="bge-m3", num_clusters=10, 
-                 min_clusters=2, max_clusters=20, auto_adjust=True):
+                 min_clusters=2, max_clusters=20, auto_adjust=True, db=None):
         """
         初始化话题聚类器
         
@@ -26,13 +27,17 @@ class BGETopicClusterer:
         - min_clusters: 最小聚类数
         - max_clusters: 最大聚类数
         - auto_adjust: 是否自动调整聚类数量
+        - db: Database对象，用于持久化存储嵌入
         """
+        self.embedding_cache = EmbeddingCache()
+
         self.ollama_url = ollama_url
         self.model_name = model_name
         self.num_clusters = num_clusters
         self.min_clusters = min_clusters
         self.max_clusters = max_clusters
         self.auto_adjust = auto_adjust
+        self.db = db
         
         # 初始化K-means聚类器
         self.kmeans = KMeans(n_clusters=num_clusters)
@@ -45,44 +50,93 @@ class BGETopicClusterer:
         # 存储聚类结果
         self.clusters = {}
     
-    def _get_embedding_from_ollama(self, text):
+    def _get_embedding_from_ollama(self, text, content_id=None):
         """
-        使用Ollama API获取文本嵌入
+        使用Ollama API获取文本嵌入，带缓存
+        
+        参数:
+        - text: 要嵌入的文本
+        - content_id: 可选内容ID，用于持久化存储
         """
+        # 检查内存缓存
+        cached_embedding = self.embedding_cache.get(text)
+        if cached_embedding is not None:
+            return cached_embedding
+        
+        # 如果提供了内容ID和数据库连接，尝试从数据库获取
+        if content_id and self.db:
+            stored_embedding = self.db.get_embedding(content_id)
+            if stored_embedding is not None:
+                # 存入内存缓存
+                self.embedding_cache.set(text, stored_embedding)
+                return stored_embedding
+        
         try:
+            # 通过API获取嵌入
             response = requests.post(
                 f"{self.ollama_url}/api/embeddings",
                 json={"model": self.model_name, "prompt": text}
             )
             response.raise_for_status()
             result = response.json()
-            return np.array(result.get("embedding", []))
+            embedding = np.array(result.get("embedding", []))
+            
+            # 验证嵌入有效性
+            if np.any(embedding) and not np.isnan(embedding).any():
+                # 存入内存缓存
+                self.embedding_cache.set(text, embedding)
+                
+                # 如果提供了内容ID和数据库连接，持久化存储
+                if content_id and self.db:
+                    self.db.save_embedding(content_id, embedding)
+                    
+                return embedding
+            else:
+                print(f"警告: 获取到无效嵌入向量")
+                return np.zeros(1024)
         except Exception as e:
             print(f"获取嵌入时出错: {e}")
-            # 返回零向量作为回退
-        return np.zeros(1024)  # BGE嵌入通常是1024维
+            return np.zeros(1024)
     
     def add_document(self, doc_id, text):
         """
         添加文档到聚类器
+        
+        参数:
+        - doc_id: 文档ID
+        - text: 文档文本内容
+        
+        返回:
+        - 文档在集合中的索引
         """
         self.documents.append({
             'id': doc_id,
             'text': text
         })
+        
+        # 如果需要立即生成嵌入，可以在这里调用
+        # 但通常我们推迟到encode_documents中批量处理
+        
         return len(self.documents) - 1  # 返回文档索引
     
+    # 在BGETopicClusterer类中添加嵌入验证
     def encode_documents(self):
-        """
-        为所有文档生成BGE嵌入
-        """
+        """为所有文档生成BGE嵌入"""
         self.doc_embeddings = []
+        valid_docs = 0
         for doc in self.documents:
             print(f"为文档生成嵌入: {doc['id']}")
             embedding = self._get_embedding_from_ollama(doc['text'])
-            self.doc_embeddings.append(embedding)
+            
+            # 验证嵌入向量有效性
+            if np.any(embedding) and not np.isnan(embedding).any():
+                self.doc_embeddings.append(embedding)
+                valid_docs += 1
+            else:
+                print(f"警告: 文档 {doc['id']} 生成的嵌入无效，跳过")
         
-        return np.array(self.doc_embeddings)
+        print(f"有效文档数: {valid_docs}/{len(self.documents)}")
+        return np.array(self.doc_embeddings) if self.doc_embeddings else np.array([])
     
     def _find_optimal_clusters(self, embeddings, min_clusters=2, max_clusters=20):
         """
@@ -128,7 +182,8 @@ class BGETopicClusterer:
     
     def cluster(self):
         """
-        使用K-means聚类文档
+        ~~使用K-means聚类文档~~
+        使用HDBSCAN聚类文档(03.31更新)
         """
         if not self.doc_embeddings:
             self.encode_documents()
@@ -137,40 +192,62 @@ class BGETopicClusterer:
         n_samples = len(self.doc_embeddings)
         if n_samples < 2:
             print(f"警告: 文档数量({n_samples})不足以进行聚类")
-            # 如果只有一个文档，直接将其分配到第一个聚类
             self.doc_clusters = np.zeros(n_samples, dtype=int)
-            
-            # 整理聚类结果
             self.clusters = {0: [self.documents[0]]} if n_samples > 0 else {}
             return self.clusters
         
-        # 自动调整聚类数量
-        if self.auto_adjust and n_samples >= self.min_clusters:
-            optimal_clusters = self._find_optimal_clusters(
-                self.doc_embeddings, 
-                self.min_clusters, 
-                min(self.max_clusters, n_samples - 1)
-            )
-            
-            # 更新聚类数
-            self.num_clusters = optimal_clusters
-            self.kmeans = KMeans(n_clusters=optimal_clusters)
-        else:
-            # 使用固定聚类数，但确保不超过样本数
-            actual_clusters = min(self.num_clusters, n_samples - 1)
-            if actual_clusters != self.num_clusters:
-                print(f"调整聚类数 {self.num_clusters} -> {actual_clusters}，匹配样本数量")
-                self.kmeans = KMeans(n_clusters=actual_clusters)
+        # 使用HDBSCAN进行聚类
+        self.clusters = self.cluster_with_hdbscan()
+        
+        return self.clusters
+    
+    def cluster_with_hdbscan(self):
+        """使用HDBSCAN聚类文档"""
+        if not self.doc_embeddings:
+            self.encode_documents()
+        
+        n_samples = len(self.doc_embeddings)
+        if n_samples < 2:
+            print(f"警告: 文档数量({n_samples})不足以进行聚类")
+            self.doc_clusters = np.zeros(n_samples, dtype=int)
+            self.clusters = {0: [self.documents[0]]} if n_samples > 0 else {}
+            return self.clusters
+        
+        # HDBSCAN参数 - 可根据数据特性调整
+        min_cluster_size = max(3, int(n_samples * 0.05))  # 至少3个文档或5%的文档
+        min_samples = 2  # 更宽松的连接性要求
+        
+        print(f"执行HDBSCAN聚类, 参数: min_cluster_size={min_cluster_size}, min_samples={min_samples}")
         
         # 执行聚类
-        self.doc_clusters = self.kmeans.fit_predict(self.doc_embeddings)
+        clusterer = hdbscan.HDBSCAN(
+            min_cluster_size=min_cluster_size,
+            min_samples=min_samples,
+            metric='euclidean',
+            cluster_selection_epsilon=0.5,  # 帮助捕获低密度区域
+            cluster_selection_method='eom'  # 使用Excess of Mass方法
+        )
+        
+        self.doc_clusters = clusterer.fit_predict(self.doc_embeddings)
         
         # 整理聚类结果
         self.clusters = {}
         for i, cluster_id in enumerate(self.doc_clusters):
+            # HDBSCAN将噪声点标记为-1
+            if cluster_id == -1:
+                cluster_id = -1  # 保持噪声点标签
+                
             if cluster_id not in self.clusters:
                 self.clusters[cluster_id] = []
             self.clusters[cluster_id].append(self.documents[i])
+        
+        # 保存簇概率信息
+        self.cluster_probabilities = clusterer.probabilities_
+        
+        # 打印聚类统计信息
+        n_clusters = len(set(self.doc_clusters)) - (1 if -1 in self.doc_clusters else 0)
+        n_noise = list(self.doc_clusters).count(-1)
+        print(f"HDBSCAN聚类完成: 找到{n_clusters}个聚类, {n_noise}个噪声点")
         
         return self.clusters
     
@@ -235,3 +312,43 @@ class BGETopicClusterer:
             })
         
         return top_docs
+    
+class EmbeddingCache:
+    """嵌入向量内存缓存"""
+    def __init__(self, max_size=10000):
+        self.cache = {}
+        self.max_size = max_size
+        self.stats = {"hits": 0, "misses": 0}
+        
+    def get(self, text):
+        """获取缓存中的嵌入向量"""
+        key = hash(text)
+        embedding = self.cache.get(key)
+        if embedding is not None:
+            self.stats["hits"] += 1
+        else:
+            self.stats["misses"] += 1
+        return embedding
+        
+    def set(self, text, embedding):
+        """存储嵌入向量到缓存"""
+        key = hash(text)
+        
+        # 如果缓存满了，删除最早的项
+        if len(self.cache) >= self.max_size:
+            oldest_key = next(iter(self.cache))
+            del self.cache[oldest_key]
+            
+        self.cache[key] = embedding
+        
+    def get_stats(self):
+        """获取缓存统计信息"""
+        total = self.stats["hits"] + self.stats["misses"]
+        hit_rate = self.stats["hits"] / total if total > 0 else 0
+        return {
+            "hits": self.stats["hits"],
+            "misses": self.stats["misses"],
+            "hit_rate": hit_rate,
+            "size": len(self.cache),
+            "max_size": self.max_size
+        }
