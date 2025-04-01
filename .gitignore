@@ -49,3 +49,5 @@ logs/
 .coverage
 htmlcov/
 .pytest_cache/embedding_training/comments.txt
+embedding_training/comments.txt
+embedding_training/comments.txt
