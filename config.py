@@ -18,7 +18,9 @@ class Config:
     
     # 聚类配置
     NUM_CLUSTERS = int(os.environ.get('NUM_CLUSTERS') or 10)
-    
+
+    # 微调模型路径
+    VIOLENCE_MODEL_PATH = os.environ.get('VIOLENCE_MODEL_PATH') or '/Volumes/base/violence_embedding/models/latest'
     # 应用配置
     VIOLENCE_THRESHOLD = 0.7  # 暴力内容阈值
     EARLY_WARNING_THRESHOLD = 0.5  # 预警阈值

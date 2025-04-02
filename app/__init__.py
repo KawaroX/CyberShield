@@ -2,10 +2,9 @@ from flask import Flask
 from flask_cors import CORS
 from config import Config
 from app.utils.baidu_nlp import BaiduNLP
-from app.utils.violence_detector import ViolenceDetector
+from app.utils.violence_detector_v2 import EnhancedViolenceDetector
 from app.utils.database import Database
 from app.utils.topic_manager import TopicManager
-
 
 # 全局变量，在应用中共享
 baidu_nlp = None
@@ -14,9 +13,7 @@ db = None
 topic_manager = None
 
 def create_app(config_class=Config):
-    app = Flask(__name__, 
-            static_folder='static',
-            template_folder='templates')
+    app = Flask(__name__)
     CORS(app)
     app.config.from_object(config_class)
     
@@ -27,13 +24,20 @@ def create_app(config_class=Config):
         app.config['BAIDU_SECRET_KEY']
     )
     
-    # 初始化暴力检测器
-    global violence_detector
-    violence_detector = ViolenceDetector()
+    # 配置微调模型路径
+    model_path = app.config.get('VIOLENCE_MODEL_PATH', 'BAAI/bge-small-zh-v1.5')
+    # 默认使用原始模型，如果配置了微调模型则使用微调模型
     
     # 初始化数据库
     global db
     db = Database(app.config.get('MONGODB_URI', 'mongodb://localhost:27017/'))
+
+    # 初始化暴力检测器
+    global violence_detector
+    violence_detector = EnhancedViolenceDetector(
+        model_path=model_path,
+        db=db
+    )
     
     # 初始化话题管理器
     global topic_manager

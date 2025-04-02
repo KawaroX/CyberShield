@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, jsonify, request
-from app import baidu_nlp, violence_detector, topic_manager, db  # 添加了 db
+from app import baidu_nlp, violence_detector, topic_manager, db
 from app.models.content_analysis import ContentAnalysis
 from app.models.topic_analysis import TopicAnalysis
 from bson import ObjectId
@@ -439,65 +439,6 @@ def analyze_topic():
         'topic_analysis': result,
         'interventions': interventions
     })
-
-
-@main_bp.route('/api/trends', methods=['GET'])
-def get_all_trends():
-    """获取所有话题的趋势分析"""
-    # 初始化趋势分析器
-    from app.utils.trend_analyzer import TrendAnalyzer
-    trend_analyzer = TrendAnalyzer(db)
-    
-    # 获取时间窗口参数
-    time_window = int(request.args.get('window', 24))
-    
-    # 执行趋势分析
-    trends = trend_analyzer.analyze_topic_trends(time_window=time_window)
-    
-    return jsonify({"trends": trends})
-
-
-@main_bp.route('/api/risks/emerging', methods=['GET'])
-def get_emerging_risks():
-    """获取新兴风险话题"""
-    # 初始化趋势分析器
-    from app.utils.trend_analyzer import TrendAnalyzer
-    trend_analyzer = TrendAnalyzer(db)
-    
-    # 检测新兴风险
-    risks = trend_analyzer.detect_emerging_risks()
-    
-    return jsonify({"emerging_risks": risks})
-
-
-@main_bp.route('/api/topics/<topic_id>/trend', methods=['GET'])
-def get_topic_trend(topic_id):
-    """获取特定话题的趋势"""
-    # 初始化趋势分析器
-    from app.utils.trend_analyzer import TrendAnalyzer
-    trend_analyzer = TrendAnalyzer(db)
-    
-    # 获取时间参数
-    time_window = int(request.args.get('window', 24))
-    
-    # 获取现在和开始时间
-    now = datetime.datetime.now()
-    start_time = now - datetime.timedelta(hours=time_window)
-    
-    # 分析话题趋势
-    trend = trend_analyzer._analyze_single_topic(topic_id, start_time, now)
-    
-    return jsonify(trend)
-
-
-@main_bp.route('/api/system/cache-stats', methods=['GET'])
-def get_cache_stats():
-    """获取嵌入缓存统计信息"""
-    if not hasattr(topic_manager.clusterer, 'embedding_cache'):
-        return jsonify({"error": "缓存未初始化"}), 404
-        
-    stats = topic_manager.clusterer.embedding_cache.get_stats()
-    return jsonify(stats)
 
 
 def determine_action(analysis):
