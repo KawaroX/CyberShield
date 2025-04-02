@@ -156,7 +156,6 @@ def train_model(dataset_file, model_name, output_dir, epochs=5, batch_size=16,
         output_path=model_save_path,
         optimizer_params={'lr': learning_rate},
         save_best_model=True,
-        show_progress_bar=True
     )
     
     print(f"模型训练完成，保存至 {model_save_path}")
