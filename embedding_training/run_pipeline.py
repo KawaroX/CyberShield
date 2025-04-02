@@ -36,7 +36,7 @@ def main():
     parser.add_argument('--input', nargs='+', help='输入CSV文件列表')
     parser.add_argument('--dir', default='/Users/kawarox/dev/get_cmts', help='CSV文件目录')
     parser.add_argument('--output_dir', default='/Volumes/base/violence_embedding', help='输出目录')
-    parser.add_argument('--model', default='BAAI/bge-small-zh-v1.5', help='基础模型')
+    parser.add_argument('--model', default='BAAI/bge-m3', help='基础模型')
     parser.add_argument('--sample_size', type=int, help='抽样大小（可选）')
     parser.add_argument('--ollama_model', default='gemma3', help='Ollama模型')
     parser.add_argument('--skip_processing', action='store_true', help='跳过数据预处理')

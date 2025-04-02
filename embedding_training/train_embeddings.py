@@ -190,7 +190,7 @@ def train_model(dataset_file, model_name, output_dir, epochs=5, batch_size=16,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='微调嵌入模型')
     parser.add_argument('--dataset', required=True, help='标注数据文件')
-    parser.add_argument('--model', default='BAAI/bge-small-zh-v1.5', help='基础模型')
+    parser.add_argument('--model', default='BAAI/bge-m3', help='基础模型')
     parser.add_argument('--output', required=True, help='输出模型目录')
     parser.add_argument('--epochs', type=int, default=5, help='训练轮数')
     parser.add_argument('--batch', type=int, default=16, help='批次大小')
