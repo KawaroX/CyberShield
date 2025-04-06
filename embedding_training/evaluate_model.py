@@ -56,14 +56,18 @@ def evaluate_model(model_path, test_data, output_dir):
     mae = mean_absolute_error(true_scores, predicted_scores)
     corr = np.corrcoef(true_scores, predicted_scores)[0, 1]
     
-    # 将分数分为高、中、低风险类别评估
+    # 将分数分为5类风险评估
     def score_to_category(score):
-        if score < 0.3:
-            return 0  # 低风险
-        elif score < 0.7:
-            return 1  # 中风险
+        if score < 0.2:
+            return 0  # 极低风险
+        elif score < 0.4:
+            return 1  # 低风险
+        elif score < 0.6:
+            return 2  # 中风险
+        elif score < 0.8:
+            return 3  # 高风险
         else:
-            return 2  # 高风险
+            return 4  # 极高风险
     
     true_categories = [score_to_category(s) for s in true_scores]
     pred_categories = [score_to_category(s) for s in predicted_scores]
@@ -119,11 +123,12 @@ def evaluate_model(model_path, test_data, output_dir):
     from sklearn.metrics import confusion_matrix
     import seaborn as sns
     
+    # 在evaluate_model.py的混淆矩阵绘制部分
     cm = confusion_matrix(true_categories, pred_categories)
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=(10, 8))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                xticklabels=['低风险', '中风险', '高风险'],
-                yticklabels=['低风险', '中风险', '高风险'])
+                xticklabels=['极低风险', '低风险', '中风险', '高风险', '极高风险'],
+                yticklabels=['极低风险', '低风险', '中风险', '高风险', '极高风险'])
     plt.xlabel('预测类别')
     plt.ylabel('真实类别')
     plt.title('混淆矩阵')

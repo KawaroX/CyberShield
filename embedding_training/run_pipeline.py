@@ -36,7 +36,7 @@ def main():
     parser.add_argument('--input', nargs='+', help='输入CSV文件列表')
     parser.add_argument('--dir', default='/Users/kawarox/dev/get_cmts', help='CSV文件目录')
     parser.add_argument('--output_dir', default='/Volumes/base/violence_embedding', help='输出目录')
-    parser.add_argument('--model', default='BAAI/bge-m3', help='基础模型')
+    parser.add_argument('--model', default='jinaai/jina-embeddings-v3', help='基础模型')
     parser.add_argument('--sample_size', type=int, help='抽样大小（可选）')
     parser.add_argument('--ollama_model', default='gemma3', help='Ollama模型')
     parser.add_argument('--skip_processing', action='store_true', help='跳过数据预处理')
@@ -47,6 +47,8 @@ def main():
     parser.add_argument('--epoch', type=int, default=5, help='训练轮数')
     parser.add_argument('--batch', type=int, default=16, help='批次大小')
     parser.add_argument('--uncertainty', type=float, default=0.3, help='需要审核的不确定性阈值')
+    parser.add_argument('--skip_balancing', action='store_true', help='跳过数据平衡')
+    parser.add_argument('--high_ratio', type=float, default=1.5, help='高风险样本比例')
     
     args = parser.parse_args()
     
@@ -135,12 +137,33 @@ def main():
     else:
         reviewed_data = labeled_data
         print("跳过数据审核，使用标注数据作为审核后数据。")
+
+    # 步骤3.5: 数据平衡
+    if not args.skip_balancing:
+        print("\n执行数据平衡...")
+        balanced_data = os.path.join(args.output_dir, f"balanced_data_{timestamp}.csv")
+        
+        # 调用平衡函数
+        success = run_command(
+            ["python", "balance_dataset.py", 
+            "--input", reviewed_data, 
+            "--output", balanced_data,
+            "--high_ratio", str(args.high_ratio)],
+            "数据平衡"
+        )
+        
+        if not success:
+            print("数据平衡失败，使用原始数据继续。")
+            balanced_data = reviewed_data
+    else:
+        balanced_data = reviewed_data
+        print("跳过数据平衡，使用审核后数据。")
     
     # 步骤4: 模型训练
     if not args.skip_training:
         success = run_command(
             ["python", "train_embeddings.py", 
-             "--dataset", reviewed_data, 
+             "--dataset", balanced_data, 
              "--model", args.model, 
              "--output", model_output,
              "--epochs", str(args.epoch),

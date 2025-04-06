@@ -203,7 +203,7 @@ class ViolenceTrainer:
 def main():
     parser = argparse.ArgumentParser(description="训练暴力评分模型")
     parser.add_argument("--dataset", required=True, help="标注数据CSV文件")
-    parser.add_argument("--model", default="BAAI/bge-m3", help="基础模型名称")
+    parser.add_argument("--model", default="jinaai/jina-embeddings-v3", help="基础模型名称")
     parser.add_argument("--output", required=True, help="模型输出目录")
     parser.add_argument("--epochs", type=int, default=5, help="训练轮数")
     parser.add_argument("--batch", type=int, default=16, help="批次大小")

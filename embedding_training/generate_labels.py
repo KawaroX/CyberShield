@@ -35,7 +35,7 @@ class ViolenceLabelGenerator:
 4. confidence：您对这个判断的信心(0到1的浮点数，0表示完全不确定，1表示非常确定)
 
 仅返回JSON格式数据，不要有多余文本。格式如下：
-{{"violence_score": 0.7, "violence_type": "harassment", "reason": "包含侮辱性语言", "confidence": 0.8}}"""
+{{"violence_score": 0.xx, "violence_type": "harassment"/"威胁"/"歧视"/"煽动"/"无", "reason": "……", "confidence": 0.xx}}"""
 
     def process_comment(self, comment, retries=3):
         """使用LLM处理单条评论，返回暴力评分和类型"""

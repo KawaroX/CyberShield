@@ -29,13 +29,6 @@ def train_model(dataset_file, model_name, output_dir, epochs=5, batch_size=16,
     # 移除重复项
     df = df.drop_duplicates(subset=['comment'])
     
-    # 拆分训练集和验证集
-    # 修改训练集和验证集的分割方式（约第33-34行）
-    # 原始代码：
-    #     train_df, val_df = train_test_split(df, test_size=test_size, random_state=42, 
-    #                                         stratify=pd.cut(df['violence_score'], bins=5))
-    
-    # 修改后代码：
     # 动态调整分箱数量
     n_bins = min(5, len(df) // 10)  # 确保每个分箱至少有10个样本
     if n_bins < 2:
@@ -88,7 +81,16 @@ def train_model(dataset_file, model_name, output_dir, epochs=5, batch_size=16,
             reps = [self.model(sentence_feature)['sentence_embedding'] for sentence_feature in sentence_features]
             # 对嵌入向量取平均值，使其成为一个单一值
             embeddings = torch.mean(reps[0], dim=1)
-            return self.loss_fct(embeddings, labels)
+            
+            # 添加权重 - 给高风险和低风险样本更高的权重
+            weights = torch.ones_like(labels).to(labels.device)
+            weights[labels < 0.3] = 2.0  # 低风险样本权重
+            weights[labels > 0.7] = 2.0  # 高风险样本权重
+        
+            # 计算加权MSE
+            squared_error = (embeddings - labels) ** 2
+            weighted_squared_error = squared_error * weights
+            return torch.mean(weighted_squared_error)
     
     # 使用自定义损失函数
     train_loss = CustomMSELoss(model=model)
@@ -107,7 +109,6 @@ def train_model(dataset_file, model_name, output_dir, epochs=5, batch_size=16,
             self.dataloader = dataloader
             self.name = name
             
-        # 在RegressionEvaluator类的__call__方法中修改以下部分
         def __call__(self, model, output_path=None, epoch=None, steps=None):
             from sklearn.metrics import mean_squared_error, mean_absolute_error
             
@@ -151,11 +152,12 @@ def train_model(dataset_file, model_name, output_dir, epochs=5, batch_size=16,
         train_objectives=[(train_dataloader, train_loss)],
         evaluator=evaluator,
         epochs=epochs,
-        evaluation_steps=1000,
-        warmup_steps=int(len(train_dataloader) * 0.1),
+        evaluation_steps=500,  # 更频繁的评估
+        warmup_steps=int(len(train_dataloader) * 0.2),  # 增加warmup步数
         output_path=model_save_path,
-        optimizer_params={'lr': learning_rate},
+        optimizer_params={'lr': learning_rate, 'weight_decay': 0.01},  # 添加权重衰减
         save_best_model=True,
+        use_amp=True  # 使用混合精度训练加速
     )
     
     print(f"模型训练完成，保存至 {model_save_path}")
